@@ -31,6 +31,16 @@ authorization_bearer = input("The bearer authorization key (i.e. 'HvwIYDw9e7tmzP
 
 
 ## Databases
+### Postgres
+host = input("Host Address: ")
+port = input("Database Server Port: ")
+database = input("Database Name: ")
+user = input("Username: ")
+password = input("User Password: ")
+    
+postgres_db = create_engine('postgresql://' + user + ':' + password + '@' + host + ':' + port + '/' + database)
+
+### MongoDB
 
 
 #---------------------------Defining custom functions------------------
@@ -83,6 +93,16 @@ showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken
 print("\nStep 2: Preprocess the ER movement data and import into Postgres database.")
 S2_startTime = currentSecondsTime()
 
+data = response_json['data']
+
+response_df = pd.DataFrame()
+response_df['Datetime'] = data['features'][0]['properties']['coordinateProperties']['times']
+response_df['Geometry'] = data['features'][0]['geometry']['coordinates']
+response_df['Subject Type'] = data['features'][0]['properties']['subject_type']
+response_df['Subject Subtype'] = data['features'][0]['properties']['subject_subtype']
+response_df['Subject ID'] = data['features'][0]['properties']['id']
+
+response_df.to_sql(str(data['features'][0]['properties']['id']), postgres_db, if_exists = 'replace')
 
 S2_endTime = currentSecondsTime()
 showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken(S2_startTime, S2_endTime)))
