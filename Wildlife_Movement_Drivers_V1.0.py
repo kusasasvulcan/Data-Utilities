@@ -9,14 +9,18 @@ Last Revision:    2020-07-13
 -------------------------------------------------------------------------'''
 
 #Import Libraries
-import time
 import datetime
+import ee
+import gridfs
 import os
-import requests
 import pandas as pd
+from pymongo import MongoClient
+import requests
 from sqlalchemy import create_engine
+import time
+import urllib.request
 
-
+ 
 print("\nTOOL - Wildlife Movement Drivers")
 print("\nReminder - For this tool to execute successfully, your machine needs:\n\t 1) the pip package and have its bin directory mapped in the machines 'path' system environment variable.\n\t 2) The pandas, sqlalchemy and psycopg2 libraries are installed using your pip package (i.e. from your terminal run 'pip install pandas sqlalchemy psycopg2'.")
 
@@ -28,17 +32,21 @@ since = input("Time filter (i.e. '2020-06-18T22:00:00.000Z'): ")
 authorization_bearer = input("The bearer authorization key (i.e. 'HvwIYDw9e7tmzPPOHt3Zf6jxPy9Sew'): ")
 
 ## Imagery filters
-
+longitude = input("Longitude coordinate that the satellite imagery must pass in decimal degrees (i.e. 36.8219): ")
+latitude = input("Latitude coordinate that the satellite imagery must pass in decimal degrees (i.e. -1.2921): ")
+bounds_point = [float(longitude), float(latitude)]
+temportal_startDate = input("The start date for the imagery time filter in 'yyyy-mm-dd' format (i.e. '2020-03-09'): ")
+temportal_endDate = input("The end date for the imagery time filter in 'yyyy-mm-dd' format (i.e. '2020-04-11'): ")
 
 ## Databases
 ### Postgres
-host = input("Host Address: ")
-port = input("Database Server Port: ")
-database = input("Database Name: ")
-user = input("Username: ")
-password = input("User Password: ")
+pghost = input("Postgres Host Address: ")
+pgport = input("Postgres Database Server Port: ")
+pgdatabase = input("Postgres Database Name: ")
+pguser = input("Postgres Username: ")
+pgpassword = input("Postgres User Password: ")
     
-postgres_db = create_engine('postgresql://' + user + ':' + password + '@' + host + ':' + port + '/' + database)
+postgres_db = create_engine('postgresql://' + pguser + ':' + pgpassword + '@' + pghost + ':' + pgport + '/' + pgdatabase)
 
 ### MongoDB
 
@@ -111,6 +119,18 @@ showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken
 # ---------------------------STEP 3: Accessing suitable Sentinel imagery from the Google Earth Engine---------------------------
 print("\nStep 3: Accessing suitable Sentinel imagery from the Google Earth Engine.")
 S3_startTime = currentSecondsTime()
+
+ee.Authenticate()
+ee.Initialize()
+bounds = ee.Geometry.Point(bounds_point)
+
+satelliteImages = ee.ImageCollection('COPERNICUS/S2_SR') # image collection instantiation
+spatialFiltered = satelliteImages.filterBounds(bounds)   # image collection filters
+temporalFiltered = spatialFiltered.filterDate(temportal_startDate, temportal_endDate)
+_sorted = temporalFiltered.sort('CLOUD_COVERAGE_ASSESSMENT')   # This will sort from least to most cloudy
+scene = _sorted.first()   # Get the first (least cloudy) image
+print('First Cloud Filtered Image \n', scene)
+
 S3_endTime = currentSecondsTime()
 showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken(S3_startTime, S3_endTime)))
 
@@ -118,6 +138,8 @@ showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken
 # ---------------------------STEP 4: Calculate the LULC from imagery and import into MongoDB---------------------------
 print("\nStep 4: Calculate the LULC from imagery and import into MongoDB.")
 S4_startTime = currentSecondsTime()
+
+
 S4_endTime = currentSecondsTime()
 showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken(S4_startTime, S4_endTime)))
 
@@ -125,6 +147,9 @@ showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken
 # ---------------------------STEP 5: Apply ML to predict Wildlife movement based on LULC---------------------------
 print("\nStep 5: Apply ML to predict Wildlife movement based on LULC.")
 S5_startTime = currentSecondsTime()
+
+
+
 S5_endTime = currentSecondsTime()
 showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken(S5_startTime, S5_endTime)))
 
