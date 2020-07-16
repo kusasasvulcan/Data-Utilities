@@ -31,13 +31,6 @@ subject_id = input("Subject id (i.e. '50ae00de-2dde-4df3-88b7-89b5c0e9gd26'): ")
 since = input("Time filter (i.e. '2020-06-18T22:00:00.000Z'): ")
 authorization_bearer = input("The bearer authorization key (i.e. 'HvwIYDw9e7tmzPPOHt3Zf6jxPy9Sew'): ")
 
-## Imagery filters
-longitude = input("Longitude coordinate that the satellite imagery must pass in decimal degrees (i.e. 36.8219): ")
-latitude = input("Latitude coordinate that the satellite imagery must pass in decimal degrees (i.e. -1.2921): ")
-bounds_point = [float(longitude), float(latitude)]
-temportal_startDate = input("The start date for the imagery time filter in 'yyyy-mm-dd' format (i.e. '2020-03-09'): ")
-temportal_endDate = input("The end date for the imagery time filter in 'yyyy-mm-dd' format (i.e. '2020-04-11'): ")
-
 ## Databases
 ### Postgres
 pghost = input("Postgres Host Address: ")
@@ -49,7 +42,13 @@ pgpassword = input("Postgres User Password: ")
 postgres_db = create_engine('postgresql://' + pguser + ':' + pgpassword + '@' + pghost + ':' + pgport + '/' + pgdatabase)
 
 ### MongoDB
-
+mongohost = input("Mongo Host Address: ")
+mongoport = input("Mongo Database Server Port: ")
+print("\nMongo Database Name: vulcan")
+mongouser = input("Mongo Username: ")
+mongopassword = input("Mongo User Password: ")
+    
+mongo_db = MongoClient('mongodb://' + mongouser + ':' + mongopassword + '@' + mongohost + ':' + mongoport + '/').vulcan
 
 #---------------------------Defining custom functions------------------
 def currentSecondsTime():
@@ -122,14 +121,22 @@ S3_startTime = currentSecondsTime()
 
 ee.Authenticate()
 ee.Initialize()
-bounds = ee.Geometry.Point(bounds_point)
+
+# Inputs
+temportal_startDate = response_df['Datetime'].min()
+temportal_endDate = response_df['Datetime'].max()
+er_sites = ee.FeatureCollection('users/skusasalethu/earthranger/Master_ER_Sites')
+
+distFilter = ee.Filter.withinDistance(distance = 0, leftField = '.geo',rightField = '.geo', maxError = 10)
+distSaveAll = ee.Join.saveAll('polygons', 'distance')
+target_ER_site = distSaveAll.apply(ee.Feature(ee.Geometry.Point(response_df['Geometry'][0])), er_sites, distFilter)
 
 satelliteImages = ee.ImageCollection('COPERNICUS/S2_SR') # image collection instantiation
-spatialFiltered = satelliteImages.filterBounds(bounds)   # image collection filters
+spatialFiltered = satelliteImages.filterBounds(target_ER_site)   # image collection filters
 temporalFiltered = spatialFiltered.filterDate(temportal_startDate, temportal_endDate)
 _sorted = temporalFiltered.sort('CLOUD_COVERAGE_ASSESSMENT')   # This will sort from least to most cloudy
 scene = _sorted.first()   # Get the first (least cloudy) image
-print('First Cloud Filtered Image \n', scene)
+print('First Cloud Filtered Image \n', scene.name)
 
 S3_endTime = currentSecondsTime()
 showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken(S3_startTime, S3_endTime)))
@@ -139,6 +146,24 @@ showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken
 print("\nStep 4: Calculate the LULC from imagery and import into MongoDB.")
 S4_startTime = currentSecondsTime()
 
+#Clip imagery to ER Site bounds
+clip_scene = scene.clip(target_ER_site)
+
+#ndvi calculation
+ndvi = clip_scene.normalizedDifference(['B5', 'B4'])
+
+#Load image into MongoDB and retain document id
+fs = gridfs.GridFS(mongo_db)
+task = ee.batch.Export.image.toAsset(ndvi, assetId='users/skusasalethu/earthranger/ndviExport',scale=30)
+print("\n---- Uploading NDVI image into Google Assets")
+task.start()
+print("\n---- NDVI image upload completed")
+
+url = "https://code.earthengine.google.com/?asset=users/skusasalethu/earthranger/ndviExport"
+mongo_doc_id = fs.put(url)   
+### Remember to now delete asset in google drive
+ 
+print ("The uploaded Document ID of imagery scene in MongoDB: " + str(mongo_doc_id))
 
 S4_endTime = currentSecondsTime()
 showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken(S4_startTime, S4_endTime)))
@@ -148,7 +173,8 @@ showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken
 print("\nStep 5: Apply ML to predict Wildlife movement based on LULC.")
 S5_startTime = currentSecondsTime()
 
-
+mongo_doc = fs.get(mongo_doc_id).read()
+''''''
 
 S5_endTime = currentSecondsTime()
 showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken(S5_startTime, S5_endTime)))
