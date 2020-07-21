@@ -1,11 +1,12 @@
 '''-------------------------------------------------------------------------
-Script Name:      Wildlife Movement Drivers
+Script Name:      Wildlife Movement Prediction
 Version:          1.0
-Description:      This tool XXXX.
+Description:      This tool predicts the movement of wildlife species based
+                    on various biophysical factors and other moving assets.
 Created By:       Kusasalethu Sithole
 Created Date:     2020-07-13
 Last Revised By:  Kusasalethu Sithole
-Last Revision:    2020-07-13
+Last Revision:    2020-07-21
 -------------------------------------------------------------------------'''
 
 #Import Libraries
