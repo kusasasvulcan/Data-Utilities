@@ -11,16 +11,15 @@ Last Revision:    2020-07-13
 #Import Libraries
 import datetime
 import ee
+import georasters as gr
 import gridfs
 import os
 import pandas as pd
 from pymongo import MongoClient
 import requests
-import shutil
 from sqlalchemy import create_engine
-import tempfile
 import time
-import urllib.request
+import wget
 
  
 print("\nTOOL - Wildlife Movement Drivers")
@@ -46,12 +45,12 @@ postgres_db = create_engine('postgresql://' + pguser + ':' + pgpassword + '@' + 
 ### MongoDB
 mongohost = input("Mongo Host Address: ")
 mongoport = input("Mongo Database Server Port: ")
-mongodatabase = input("Mongo Database Name: ")
+print("Mongo Database Name: vulcan")
 mongouser = input("Mongo Username: ")
 mongopassword = input("Mongo User Password: ")
     
-mongo_client = MongoClient('mongodb://' + mongouser + ':' + mongopassword + '@' + mongohost + ':' + mongoport + '/' + mongodatabase)
-mongo_db = mongo_client.mongodatabase
+mongo_client = MongoClient('mongodb://' + mongouser + ':' + mongopassword + '@' + mongohost + ':' + mongoport + '/vulcan')
+mongo_db = mongo_client.vulcan
 
 #---------------------------Defining custom functions------------------
 def currentSecondsTime():
@@ -111,6 +110,12 @@ response_df['Geometry'] = data['features'][0]['geometry']['coordinates']
 response_df['Subject Type'] = data['features'][0]['properties']['subject_type']
 response_df['Subject Subtype'] = data['features'][0]['properties']['subject_subtype']
 response_df['Subject ID'] = data['features'][0]['properties']['id']
+response_df['latitude'] = ''
+response_df['longitude'] = ''
+
+for index,row in response_df.iterrows():
+    response_df['latitude'][index] = row['Geometry'][0]
+    response_df['longitude'][index] = row['Geometry'][1]
 
 response_df.to_sql(str(data['features'][0]['properties']['id']), postgres_db, if_exists = 'replace')
 
@@ -130,7 +135,7 @@ temportal_endDate = response_df['Datetime'].max()
 temportal_startDate = str(int(temportal_endDate[:4]) - 1) + temportal_endDate[4:]
 er_sites = ee.FeatureCollection('users/skusasalethu/earthranger/Master_ER_Sites')
 
-distFilter = ee.Filter.withinDistance(distance = 10000, leftField = '.geo',rightField = '.geo', maxError = 10)
+distFilter = ee.Filter.withinDistance(distance = 1000000, leftField = '.geo',rightField = '.geo', maxError = 10)
 distSaveAll = ee.Join.saveAll('polygons', 'distance')
 target_ER_site = distSaveAll.apply(ee.Feature(ee.Geometry.Point(response_df['Geometry'][0])), er_sites, distFilter)
 
@@ -139,10 +144,10 @@ spatialFiltered = satelliteImages.filterBounds(target_ER_site)   # image collect
 temporalFiltered = spatialFiltered.filterDate(temportal_startDate, temportal_endDate)
 sorted_images = temporalFiltered.sort('CLOUD_COVERAGE_ASSESSMENT')   # This will sort from least to most cloudy
 scene = sorted_images.first()   # Get the first (least cloudy) image
-print('First Cloud Filtered Image \n', scene.name)
+print('\nFirst Cloud Filtered Image \n', scene.name)
 
 S3_endTime = currentSecondsTime()
-showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken(S3_startTime, S3_endTime)))
+showPyMessage("\n -- Step completed successfully. Step took {}. ".format(timeTaken(S3_startTime, S3_endTime)))
 
 
 # ---------------------------STEP 4: Calculate the LULC from imagery and import into MongoDB---------------------------
@@ -157,7 +162,7 @@ ndvi = clip_scene.normalizedDifference(['B5', 'B4'])
 
 #Load image into MongoDB and retain document id
 fs = gridfs.GridFS(mongo_db)
-task = ee.batch.Export.image.toAsset(ndvi, assetId='users/skusasalethu/earthranger/ndviExport',scale=10)
+task = ee.batch.Export.image.toAsset(ndvi, assetId='users/skusasalethu/earthranger/ndviExport',scale=10, maxPixels=200000000)
 print("\n---- Uploading NDVI image into Google Assets")
 task.start()
 upload_startTime = currentSecondsTime()
@@ -173,12 +178,10 @@ upload_endTime = currentSecondsTime()
 print("\n---- NDVI image upload completed. Upload took {}".format(timeTaken(upload_startTime, upload_endTime)))
 
 url = "https://code.earthengine.google.com/?asset=users/skusasalethu/earthranger/ndviExport"
-with urllib.request.urlopen(url) as response:
-    with tempfile.NamedTemporaryFile() as tmp_file:
-        shutil.copyfileobj(response, tmp_file)
-        mongo_doc_id = fs.put(tmp_file)  
-        
-### Remember to now delete asset in google drive
+wget.download(url, './scene_ndvi.tif')
+mongo_doc_id = fs.put('./scene_ndvi.tif')  
+
+### Remember to now delete asset in google drive and local directory
  
 print ("The uploaded Document ID of imagery scene in MongoDB: " + str(mongo_doc_id))
 
@@ -190,8 +193,22 @@ showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken
 print("\nStep 5: Apply ML to predict Wildlife movement based on LULC.")
 S5_startTime = currentSecondsTime()
 
+#The training table
 mongo_ndvi = fs.get(mongo_doc_id).read()
+gr_ndvi = gr.load_tiff(mongo_ndvi)
+training_table = response_df[:]
+training_table['NDVI'] = gr_ndvi.map_pixel(response_df['longitude'],response_df['latitude'])
+
+#ML
+'''NDVI vs PRESENCE(1) OR NOT (O)'''
+'''LULC vs PRESENCE(1) OR NOT (O)'''
+'''Relief vs PRESENCE(1) OR NOT (O)'''
+'''Temp vs PRESENCE(1) OR NOT (O)'''
+'''Moisture vs PRESENCE(1) OR NOT (O)'''
+'''Other tracked species vs PRESENCE(1) OR NOT (O)'''
+'''Reported incident vs PRESENCE(1) OR NOT (O)'''
 ''''''
+'''Combined variables vs PRESENCE(1) OR NOT (O)'''
 
 S5_endTime = currentSecondsTime()
 showPyMessage(" -- Step completed successfully. Step took {}. ".format(timeTaken(S5_startTime, S5_endTime)))
