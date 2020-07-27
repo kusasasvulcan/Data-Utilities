@@ -1,5 +1,5 @@
 '''-------------------------------------------------------------------------
-Script Name:      Wildlife Movement Prediction
+Script Name:      Real-time Wildlife Movement Prediction
 Version:          1.0
 Description:      This tool predicts the movement of wildlife species based
                     on various biophysical factors and other moving assets.
@@ -23,7 +23,7 @@ import time
 import wget
 
  
-print("\nTOOL - Wildlife Movement Drivers")
+print("\nTOOL - Real-time Wildlife Movement Prediction")
 print("\nReminder - For this tool to execute successfully, your machine needs:\n\t 1) the pip package and have its bin directory mapped in the machines 'path' system environment variable.\n\t 2) The pandas, sqlalchemy and psycopg2 libraries are installed using your pip package (i.e. from your terminal run 'pip install pandas sqlalchemy psycopg2'.")
 
 #---------------------------Declaring Data Inputs------------------
