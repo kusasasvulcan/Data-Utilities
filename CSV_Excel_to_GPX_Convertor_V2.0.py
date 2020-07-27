@@ -25,7 +25,7 @@ import xml.etree.ElementTree as ET
 
 #---------------------------------------Declaring Data Paths and target fields----------------------------------------------------------------------
 ## Target csv/excel input
-target_file = input("\nAbsolute path of the target csv/excel file: ")
+target_file = input("\nAbsolute path of the target csv/excel file (MANDATORY): ")
 if target_file == "":
     print("REMINDER: When running this tool, remember to specify the absolute path of the target csv/excel according to request above.")
     t.sleep(10)
@@ -50,7 +50,7 @@ for column in target_spreadsheet.columns:
     print("\t " + str(column))
 
 ## Longitude field input
-longitude_field = input("Please state the exact name of the longitude field in your csv/excel file: ")
+longitude_field = input("Please state the exact name of the longitude field in your csv/excel file (MANDATORY): ")
 if longitude_field == "":
     print("REMINDER: When running this tool, remember to specify the name of the longitude field according to request above.")
     t.sleep(10)
@@ -69,7 +69,7 @@ for field in target_spreadsheet.columns:
         exit()
 
 ## Latitude field input
-latitude_field = input("Please state the exact name of the latitude field in your csv/excel file: ")
+latitude_field = input("Please state the exact name of the latitude field in your csv/excel file (MANDATORY): ")
 if latitude_field == "":
     print("REMINDER: When running this tool, remember to specify the name of the latitude field according to request above.")
     t.sleep(10)
@@ -88,7 +88,7 @@ for field in target_spreadsheet.columns:
         exit()
 
 ## Datetime field input
-datetime_field = input("Please state the exact name of the datetime field in your csv/excel file: ")
+datetime_field = input("Please state the exact name of the datetime field in your csv/excel file. Please ensure that your datetime field in your spreadsheet follows this pattern YYYY-MM-DD HH:MM:SS (MANDATORY): ")
 if datetime_field == "":
     print("REMINDER: When running this tool, remember to specify the name of the datetime field according to request above.")
     t.sleep(10)
@@ -107,23 +107,22 @@ for field in target_spreadsheet.columns:
         exit()
 
 ## Elevation field input
-elevation_field = input("Please state the exact name of the elevation field in your csv/excel file: ")
+elevation_field = input("Please state the exact name of the elevation field in your csv/excel file (OPTIONAL. If none, leave this empty): ")
 if elevation_field == "":
-    print("REMINDER: When running this tool, remember to specify the name of the elevation field according to request above.")
-    t.sleep(10)
-    exit()
-field_no = len(target_spreadsheet.columns)
-iter_no = 0
-for field in target_spreadsheet.columns:
-    if field == elevation_field:
-        break 
-    elif  iter_no < field_no - 1:
-        iter_no += 1
-        continue
-    else:
-        print("REMINDER: Ensure that the field name provided above is both typed correctly (Font case sensitive) and the field actually exists in your csv/excel file.")
-        t.sleep(10)
-        exit()
+    pass
+elif elevation_field != "":
+    field_no = len(target_spreadsheet.columns)
+    iter_no = 0
+    for field in target_spreadsheet.columns:
+        if field == elevation_field:
+            break 
+        elif  iter_no < field_no - 1:
+            iter_no += 1
+            continue
+        else:
+            print("REMINDER: Ensure that the field name provided above is both typed correctly (Font case sensitive) and the field actually exists in your csv/excel file.")
+            t.sleep(10)
+            exit()
 
 #-----------------------------------------------Preparing the environment---------------------------------------------
 os.chdir(pathlib.Path(target_file).parent.absolute())
@@ -156,26 +155,49 @@ def showPyMessage(message, messageType="Message"):
 startTime = currentSecondsTime()
 
 
-#--------------------------------------------------STEP 1: Create a table using only the target fields---------------------------------------------
-print("\nStep 1: Create a table using only the target fields - " + longitude_field + ", " + latitude_field + ", " + datetime_field + " - from your " + target_file_name + " file.")
+#--------------------------------------------------STEP 1: Creating a table using only the target fields---------------------------------------------
+print("\nStep 1: Creating a table using only the target fields (" + longitude_field + ", " + latitude_field + ", " + datetime_field + ",...) from your " + target_file_name + " file.")
 extracted_csv = pd.DataFrame()
 extracted_csv["Latitude"] = target_spreadsheet[latitude_field]
 extracted_csv["Longitude"] = target_spreadsheet[longitude_field]
 extracted_csv["Datetime"] = target_spreadsheet[datetime_field]
-extracted_csv["Elevation"] = target_spreadsheet[elevation_field]
+if elevation_field == "":
+    extracted_csv["Elevation"] = 0.999999999
+elif elevation_field != "":
+    extracted_csv["Elevation"] = target_spreadsheet[elevation_field]
 
 for index, row in extracted_csv.iterrows():
-	if len(row["Datetime"].split()) > 1:
-		extracted_csv.loc[index, "Datetime"]= row["Datetime"].split()[0] + "T" + row["Datetime"].split()[1] + "Z"
-        
+    datetime_value = str(row["Datetime"])
+    if len(datetime_value.split()) > 1:
+        date = datetime_value.split()[0]
+        time = datetime_value.split()[1]
+        try:
+            if int(date[-4:]) > 1900 and date[-5:-4] == "/":
+                day = date.split("/")[0]
+                month = date.split("/")[1]
+                year = date.split("/")[2]
+                date = year + "-" + month + "-" + day
+        except:
+            continue
+        hour = time.split(":")[0]
+        minutes = time.split(":")[1]
+        if len(time) < 6:
+            time = hour + ":" + minutes + ":00"
+        extracted_csv.loc[index, "Datetime"]= date + "T" + time + "Z"
+
 for index, row in extracted_csv.iterrows():
-    extracted_csv["Latitude"] = row["Latitude"].replace(",", ".")
-    extracted_csv["Longitude"] = row["Longitude"].replace(",", ".")
-    extracted_csv["Elevation"] = float(row["Elevation"])
+    if str(extracted_csv["Latitude"][0])[1] == "," or str(extracted_csv["Latitude"][0])[2] == "," or str(extracted_csv["Latitude"][0])[3] == ",":
+        extracted_csv.loc[index, "Latitude"] = row["Latitude"].replace(",", ".")
+        extracted_csv.loc[index, "Longitude"] = row["Longitude"].replace(",", ".")
+    else:
+        extracted_csv.loc[index, "Latitude"] = str(row["Latitude"])
+        extracted_csv.loc[index, "Longitude"] = str(row["Longitude"])    
+    if elevation_field != "":
+        extracted_csv.loc[index, "Elevation"] = float(row["Elevation"])
 
 
-#--------------------------------------------------STEP 2: Save the extracted table as gpx file format---------------------------------------------
-print("\nStep 2: Save the extracted table as gpx file format.")
+#--------------------------------------------------STEP 2: Saving the extracted table as gpx file format---------------------------------------------
+print("\nStep 2: Saving the extracted table as gpx file format.")
 
 extracted_csv_file_name = target_file[:-4] + "_extract.csv"
 extracted_csv.to_csv(extracted_csv_file_name)
@@ -188,7 +210,8 @@ gpx.set("xmlns","http://www.topografix.com/GPX/1/1")
 gpx.set("xsi:schemaLocation","http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd")
 gpx.set("version","1.1")
 gpx.set("creator","Open GPX Tracker for iOS")
-trkseg = ET.SubElement(gpx, "trkseg")
+trk = ET.SubElement(gpx, "trk")
+trkseg = ET.SubElement(trk, "trkseg")
 
 #Write trkpt attributes and subelement text
 row_number = len(extracted_csv["Latitude"])
