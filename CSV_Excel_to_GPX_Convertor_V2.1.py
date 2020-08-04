@@ -1,13 +1,13 @@
 '''-------------------------------------------------------------------------
 Script Name:      CSV/Excel to GPX Converter
-Version:          2.0
+Version:          2.1
 Description:      This tool automates the conversion of csv or excel files
                     into the custom gpx file format.
                   file format.
 Created By:       Kusasalethu Sithole
 Created Date:     2020-07-08
 Last Revised By:  Kusasalethu Sithole
-Last Revision:    2020-07-26
+Last Revision:    2020-08-04
 -------------------------------------------------------------------------'''
 
 print("\n\nTOOL - CSV/Excel to GPX Converter")
@@ -19,6 +19,7 @@ import datetime
 import os
 import pandas as pd
 import pathlib
+import re
 import time as t
 import xml.etree.ElementTree as ET
 
@@ -48,13 +49,32 @@ else:
 print("\n\nThe existing fields in this table are:")
 for column in target_spreadsheet.columns:
     print("\t " + str(column))
+    if re.search('longitude', column.lower()) or column.lower() == "lon":
+        longitude_field = column
+    if re.search('latitude', column.lower()) or column.lower() == "lat":
+        latitude_field = column
+    if re.search('date', column.lower()):
+        datetime_field = column
+    if re.search('elevation', column.lower()) or re.search('altitude', column.lower()):
+        elevation_field = column
 
 ## Longitude field input
-longitude_field = input("Please state the exact name of the longitude field in your csv/excel file (MANDATORY): ")
-if longitude_field == "":
-    print("REMINDER: When running this tool, remember to specify the name of the longitude field according to request above.")
-    t.sleep(10)
-    exit()
+try:
+    print("\nYour longitude fieldname is: " + longitude_field, end="")
+    longitude_field_input = input("If we have accurately determined the name of your longitude field, please press enter. If not, please type the correct name: ")
+    if longitude_field_input == "" or longitude_field_input == " ":
+        print("Longitude fieldname is now verified.")
+    else:
+        longitude_field = longitude_field_input    
+except NameError:
+    longitude_field_input = input("We could not automatically determine the name of your longitude field. Please state the exact name of the longitude field in your csv/excel file (MANDATORY): ")
+    if longitude_field_input == "" or longitude_field_input == " ":
+        print("REMINDER: When running this tool, remember to specify the name of the longitude field according to request above.")
+        t.sleep(10)
+        exit()
+    else:
+        longitude_field = longitude_field_input
+    
 field_no = len(target_spreadsheet.columns)
 iter_no = 0
 for field in target_spreadsheet.columns:
@@ -64,16 +84,27 @@ for field in target_spreadsheet.columns:
         iter_no += 1
         continue
     else:
-        print("REMINDER: Ensure that the field name provided above is both typed correctly (Font case sensitive) and the field actually exists in your csv/excel file.")
+        print("REMINDER: Ensure that the fieldname provided above is both typed correctly (Font case sensitive) and the field actually exists in your csv/excel file.")
         t.sleep(10)
         exit()
 
 ## Latitude field input
-latitude_field = input("Please state the exact name of the latitude field in your csv/excel file (MANDATORY): ")
-if latitude_field == "":
-    print("REMINDER: When running this tool, remember to specify the name of the latitude field according to request above.")
-    t.sleep(10)
-    exit()
+try:
+    print("\nYour latitude fieldname is: " + latitude_field, end="")
+    latitude_field_input = input("If we have accurately determined the name of your latitude field, please press enter. If not, please type the correct name: ")
+    if latitude_field_input == "" or latitude_field_input == " ":
+        print("Latitude fieldname is now verified.")
+    else:
+        latitude_field = latitude_field_input    
+except NameError:
+    latitude_field_input = input("We could not automatically determine the name of your latitude field. Please state the exact name of the latitude field in your csv/excel file (MANDATORY): ")
+    if latitude_field_input == "" or latitude_field_input == " ":
+        print("REMINDER: When running this tool, remember to specify the name of the latitude field according to request above.")
+        t.sleep(10)
+        exit()
+    else:
+        latitude_field = latitude_field_input
+    
 field_no = len(target_spreadsheet.columns)
 iter_no = 0
 for field in target_spreadsheet.columns:
@@ -83,16 +114,27 @@ for field in target_spreadsheet.columns:
         iter_no += 1
         continue
     else:
-        print("REMINDER: Ensure that the field name provided above is both typed correctly (Font case sensitive) and the field actually exists in your csv/excel file.")
+        print("REMINDER: Ensure that the fieldname provided above is both typed correctly (Font case sensitive) and the field actually exists in your csv/excel file.")
         t.sleep(10)
         exit()
 
 ## Datetime field input
-datetime_field = input("Please state the exact name of the datetime field in your csv/excel file. Please ensure that your datetime field in your spreadsheet follows this pattern YYYY-MM-DD HH:MM:SS (MANDATORY): ")
-if datetime_field == "":
-    print("REMINDER: When running this tool, remember to specify the name of the datetime field according to request above.")
-    t.sleep(10)
-    exit()
+try:
+    print("\nYour Datetime fieldname is: " + datetime_field, end="")
+    datetime_field_input = input("If we have accurately determined the name of your datetime field, please press enter. If not, please type the correct name: ")
+    if datetime_field_input == "" or datetime_field_input == " ":
+        print("Datetime fieldname is now verified.")
+    else:
+        datetime_field = datetime_field_input    
+except NameError:
+    datetime_field_input = input("We could not automatically determine the name of your datetime field. Please state the exact name of the datetime field in your csv/excel file (MANDATORY and format must be YYYY-MM-DD HH:MM:SS): ")
+    if datetime_field_input == "" or datetime_field_input == " ":
+        print("REMINDER: When running this tool, remember to specify the name of the datetime field according to request above.")
+        t.sleep(10)
+        exit()
+    else:
+        datetime_field = datetime_field_input
+    
 field_no = len(target_spreadsheet.columns)
 iter_no = 0
 for field in target_spreadsheet.columns:
@@ -102,17 +144,28 @@ for field in target_spreadsheet.columns:
         iter_no += 1
         continue
     else:
-        print("REMINDER: Ensure that the field name provided above is both typed correctly (Font case sensitive) and the field actually exists in your csv/excel file.")
+        print("REMINDER: Ensure that the fieldname provided above is both typed correctly (Font case sensitive) and the field actually exists in your csv/excel file.")
         t.sleep(10)
         exit()
 
 ## Elevation field input
-elevation_field = input("Please state the exact name of the elevation field in your csv/excel file (OPTIONAL. If none, leave this empty): ")
-if elevation_field == "":
-    pass
-elif elevation_field != "":
-    field_no = len(target_spreadsheet.columns)
-    iter_no = 0
+try:
+    print("\nYour Elevation fieldname is: " + elevation_field, end="")
+    elevation_field_input = input("If we have accurately determined the name of your elevation field, please press enter. If not, please type the correct name: ")
+    if elevation_field_input == "" or elevation_field_input == " ":
+        print("Elevation fieldname is now verified.")
+    else:
+        elevation_field = elevation_field_input    
+except NameError:
+    elevation_field_input = input("We could not automatically determine the name of your elevation field. Please state the exact name of the elevation field in your csv/excel file (OPTIONAL, if there is none, leave answer as empty by pressing enter): ")
+    if elevation_field_input == "" or elevation_field_input == " ":
+        elevation_field = ""
+    else:
+        elevation_field = elevation_field_input
+    
+field_no = len(target_spreadsheet.columns)
+iter_no = 0
+if elevation_field != "":
     for field in target_spreadsheet.columns:
         if field == elevation_field:
             break 
@@ -120,9 +173,10 @@ elif elevation_field != "":
             iter_no += 1
             continue
         else:
-            print("REMINDER: Ensure that the field name provided above is both typed correctly (Font case sensitive) and the field actually exists in your csv/excel file.")
+            print("REMINDER: Ensure that the fieldname provided above is both typed correctly (Font case sensitive) and the field actually exists in your csv/excel file.")
             t.sleep(10)
             exit()
+
 
 #-----------------------------------------------Preparing the environment---------------------------------------------
 os.chdir(pathlib.Path(target_file).parent.absolute())
@@ -199,11 +253,16 @@ for index, row in extracted_csv.iterrows():
 #--------------------------------------------------STEP 2: Saving the extracted table as gpx file format---------------------------------------------
 print("\nStep 2: Saving the extracted table as gpx file format.")
 
-extracted_csv_file_name = target_file[:-4] + "_extract.csv"
-extracted_csv.to_csv(extracted_csv_file_name)
-gpx_file_name = target_file[:-4] + ".gpx"
+if target_file[-4] == ".":
+    extracted_csv_file_name = target_file[:-4] + "_extract.csv"
+    extracted_csv.to_csv(extracted_csv_file_name)
+    gpx_file_name = target_file[:-4] + ".gpx"
+elif target_file[-5] == ".":
+    extracted_csv_file_name = target_file[:-5] + "_extract.csv"
+    extracted_csv.to_csv(extracted_csv_file_name)
+    gpx_file_name = target_file[:-5] + ".gpx"
 
-#The fixed 
+#The standard elements
 gpx = ET.Element("gpx")
 gpx.set("xmlns:xsi","http://www.w3.org/2001/XMLSchema-instance")
 gpx.set("xmlns","http://www.topografix.com/GPX/1/1")
