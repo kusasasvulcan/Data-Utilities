@@ -1,6 +1,6 @@
 '''---------------------------------------------------------------------------------
 Script Name:      ER Sites IUCN Impact Deducer
-Version:          3.0
+Version:          3.1
 Description:      This tool automates the deduction of the IUCN terrestrial mammal
                     species per ER Site (hence the ER Sites IUCN Impact).
 Created By:       Kusasalethu Sithole
@@ -142,24 +142,8 @@ showPyMessage("\n -- Step 2 completed successfully. Step took {}. ".format(timeT
 print("\nStep 3: Summing the filtered {} Terrestrial Mammals per ER Site.".format(target_category_name))
 S3_startTime = currentSecondsTime()
 
-sql_3 = "WITH site_CR_T_Mammals AS (SELECT a.name er_site, b.binomial species, CASE WHEN b.category = '{0}' THEN '{1}' ELSE '' END status, a.geom geom FROM er_sites a, terrestrial_mammals b WHERE st_intersects(a.geom, b.geom) AND UPPER(b.category)='{0}') SELECT MIN(er_site) er_site, MIN(status) status, COUNT(er_site) IUCN_Impact, MIN(geom) geom FROM site_CR_T_Mammals GROUP BY er_site;".format(target_category_key, target_category_name)
+sql_3 = "WITH site_CR_T_Mammals AS (SELECT a.name er_site, b.binomial species, CASE WHEN b.category = '{0}' THEN '{1}' ELSE '' END status, a.geom geom FROM er_sites a, terrestrial_mammals b WHERE st_intersects(a.geom, b.geom) AND UPPER(b.category)='{0}') SELECT MIN(er_site) er_site, MIN(status) status, COUNT(er_site) IUCN_Impact, string_agg(species, '; ') Species_List, MIN(geom) geom FROM site_CR_T_Mammals current GROUP BY er_site;".format(target_category_key, target_category_name)
 summed_filtered_sites_mammals = gpd.GeoDataFrame.from_postgis(sql_3, pg_con, geom_col='geom' )
-summed_filtered_sites_mammals["Species"] = ""
-
-for x_index, x_row in summed_filtered_sites_mammals.iterrows():
-        site = x_row["er_site"]
-        species_list = []
-        target_records = filtered_sites_mammals[filtered_sites_mammals["er_site"] == site]
-        for y_index, y_row in target_records.iterrows():
-            species_list.append(y_row["species"])
-        species_no = len(species_list)
-        species = species_list[0]
-        itr = 1
-        while itr < species_no:
-            species = species + ";" + species_list[itr]
-            itr += 1
-        summed_filtered_sites_mammals.loc[x_index, "Species"] = species
-
 summed_filtered_sites_mammals.to_file(".\ER_Sites_IUCN_Impact.shp")
 
 S3_endTime = currentSecondsTime()
