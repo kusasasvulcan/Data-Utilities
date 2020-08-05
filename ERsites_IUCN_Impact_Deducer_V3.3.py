@@ -1,8 +1,8 @@
 '''---------------------------------------------------------------------------------
 Script Name:      ER Sites IUCN Impact Deducer
-Version:          3.1
-Description:      This tool automates the deduction of the IUCN terrestrial mammal
-                    species per ER Site (hence the ER Sites IUCN Impact).
+Version:          3.3
+Description:      This tool automates the deduction of the IUCN Animal species per
+                    ER Site (hence the ER Sites IUCN Impact).
 Created By:       Kusasalethu Sithole
 Created Date:     2020-07-06
 Last Revised By:  Kusasalethu Sithole
@@ -47,7 +47,7 @@ postgres_engine = create_engine('postgresql://' + pguser + ':' + pgpassword + '@
 pg_con = psycopg2.connect(host = pghost, database = pgdatabase, port = pgport, user = pguser, password = pgpassword)
 
 ## State target IUCN category
-sql_iucn_categories = "SELECT DISTINCT(category) status FROM terrestrial_mammals;"
+sql_iucn_categories = "SELECT DISTINCT(category) status FROM iucn_animals;"
 categories = pd.read_sql_query(sql_iucn_categories,con=postgres_engine)
 
 print("\n\nThe existing IUCN categories are:")
@@ -80,7 +80,9 @@ category_names = {"LC":"Least Concern",
                  "VU":"Vulnerable",
                  "DD":"Data Deficient",
                  "EW":"Extinct in the Wild",
-                 "NT":"Near Threatened"}
+                 "NT":"Near Threatened",
+                 "LR/cd":"LR/cd",
+                 "LR/lc":"LR/lc"}
 
 target_category_name = category_names[target_category_key]
 
@@ -115,42 +117,33 @@ def showPyMessage(message, messageType="Message"):
 
 startTime = currentSecondsTime()
 
-# ---------------------------STEP 1: Clipping the IUCN's Terrestrial Mammals layer by the ER Sites layer---------------------------
-print("\nStep 1: Clipping the IUCN's Terrestrial Mammals layer by the ER Sites layer.")
+
+# ---------------------------STEP 1: Filtering only the Animals of the user target category that overlap the ER Sites---------------------------
+print("\nStep 1: Filtering only the {} Animals that overlap the ER Sites.".format(target_category_name))
 S1_startTime = currentSecondsTime()
 
-sql_1 = "SELECT a.name er_site, b.binomial species, a.geom geom FROM er_sites a, terrestrial_mammals b WHERE st_intersects(a.geom, b.geom);"
-sites_mammals = gpd.GeoDataFrame.from_postgis(sql_1, pg_con, geom_col='geom' )
-sites_mammals.to_file(".\ER_Sites_IUCN_Terrestrial_Mammals.shp")
+sql_1 = "SELECT a.name er_site, b.binomial species, CASE WHEN b.category = '{0}' THEN '{1}' ELSE '' END status, ST_MakeValid(a.geom) geom FROM er_sites a, iucn_animals b WHERE st_intersects(ST_MakeValid(a.geom), ST_MakeValid(a.geom)) AND UPPER(b.category)='{0}';".format(target_category_key, target_category_name)
+filtered_sites_animals = gpd.GeoDataFrame.from_postgis(sql_1, pg_con, geom_col='geom' )
+filtered_sites_animals.to_file(".\{}_ER_Sites_IUCN_Animals.shp".format(target_category_name))
 
 S1_endTime = currentSecondsTime()
 showPyMessage("\n -- Step 1 completed successfully. Step took {}. ".format(timeTaken(S1_startTime, S1_endTime)))
+    
 
-# ---------------------------STEP 2: Filtering only the Terrestrial Mammals of the user target category that overlap the ER Sites---------------------------
-print("\nStep 2: Filtering only the {} Terrestrial Mammals that overlap the ER Sites.".format(target_category_name))
+# ---------------------------STEP 2: Summing the filtered Animals of the user target category per ER Site---------------------------
+print("\nStep 2: Summing the filtered {} Animals per ER Site.".format(target_category_name))
 S2_startTime = currentSecondsTime()
 
-sql_2 = "SELECT a.name er_site, b.binomial species, CASE WHEN b.category = '{0}' THEN '{1}' ELSE '' END status, a.geom geom FROM er_sites a, terrestrial_mammals b WHERE st_intersects(a.geom, b.geom) AND UPPER(b.category)='{0}';".format(target_category_key, target_category_name)
-filtered_sites_mammals = gpd.GeoDataFrame.from_postgis(sql_2, pg_con, geom_col='geom' )
-filtered_sites_mammals.to_file(".\{}_ER_Sites_IUCN_Terrestrial_Mammals.shp".format(target_category_name))
+sql_2 = "WITH site_CR_T_Animals AS (SELECT a.name er_site, b.binomial species, CASE WHEN b.category = '{0}' THEN '{1}' ELSE '' END status, ST_MakeValid(a.geom) geom FROM er_sites a, iucn_animals b WHERE st_intersects(ST_MakeValid(a.geom), ST_MakeValid(a.geom)) AND UPPER(b.category)='{0}') SELECT MIN(er_site) er_site, MIN(status) status, COUNT(er_site) IUCN_Impact, string_agg(species, '; ') Species_List, MIN(geom) geom FROM site_CR_T_Animals current GROUP BY er_site;".format(target_category_key, target_category_name)
+summed_filtered_sites_animals = gpd.GeoDataFrame.from_postgis(sql_2, pg_con, geom_col='geom' )
+summed_filtered_sites_animals.to_file(".\ER_Sites_IUCN_Impact.shp")
 
 S2_endTime = currentSecondsTime()
 showPyMessage("\n -- Step 2 completed successfully. Step took {}. ".format(timeTaken(S2_startTime, S2_endTime)))
-    
-    
-# ---------------------------STEP 3: Summing the filtered Terrestrial Mammals of the user target category per ER Site---------------------------
-print("\nStep 3: Summing the filtered {} Terrestrial Mammals per ER Site.".format(target_category_name))
-S3_startTime = currentSecondsTime()
-
-sql_3 = "WITH site_CR_T_Mammals AS (SELECT a.name er_site, b.binomial species, CASE WHEN b.category = '{0}' THEN '{1}' ELSE '' END status, a.geom geom FROM er_sites a, terrestrial_mammals b WHERE st_intersects(a.geom, b.geom) AND UPPER(b.category)='{0}') SELECT MIN(er_site) er_site, MIN(status) status, COUNT(er_site) IUCN_Impact, string_agg(species, '; ') Species_List, MIN(geom) geom FROM site_CR_T_Mammals current GROUP BY er_site;".format(target_category_key, target_category_name)
-summed_filtered_sites_mammals = gpd.GeoDataFrame.from_postgis(sql_3, pg_con, geom_col='geom' )
-summed_filtered_sites_mammals.to_file(".\ER_Sites_IUCN_Impact.shp")
-
-S3_endTime = currentSecondsTime()
-showPyMessage("\n -- Step 3 completed successfully. Step took {}. ".format(timeTaken(S3_startTime, S3_endTime)))
 
 
 endTime = currentSecondsTime()
+
 
 # --------------------------- End of Process ---------------------------
 showPyMessage("\n\nProcessing done. Process took {}. ".format(timeTaken(startTime, endTime)))
