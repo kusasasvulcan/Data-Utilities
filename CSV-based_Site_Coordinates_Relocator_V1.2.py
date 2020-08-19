@@ -1,12 +1,12 @@
 '''-------------------------------------------------------------------------
 Script Name:      CSV-based Site Coordinates Relocator
-Version:          1.1
+Version:          1.2
 Description:      This tool automates the relocation of coordinates in CSV
                     file from one site to another.
 Created By:       Kusasalethu Sithole
 Created Date:     2020-08-18
 Last Revised By:  Kusasalethu Sithole
-Last Revision:    2020-08-18
+Last Revision:    2020-08-19
 -------------------------------------------------------------------------'''
 
 print("\n\nTOOL - CSV-based Site Coordinates Relocator")
@@ -65,7 +65,7 @@ except NameError:
 
 if point_geometry_field != '':
     coordinate_nature = '1'
-elif point_geometry_field != '' and longitude_field != '' or latitude_field != '':
+elif longitude_field != '' or latitude_field != '':
     coordinate_nature = '2'
 else:
     coordinate_nature = ''
@@ -208,6 +208,16 @@ if target_lat_input == "" or target_lat_input == " ":
 else:
     target_lat = target_lat_input
     
+    
+## Shrink Stretch Value
+shrink_stretch_value_input = input("Please state the desired shrink/stretch value for your coordinates pattern. i.e to apply no shrink or stretch to pattern just enter 1; OR to shrink the pattern by a constant of 2 enter 0.5 (which is 1/constant); OR to stretch the pattern by a constant of 4 enter 4 (MANDATORY): ")
+if shrink_stretch_value_input == "" or shrink_stretch_value_input == " ":
+    print("REMINDER: When running this tool, remember to specify the Shrink or Stretch Value for your new site according to request above.")
+    t.sleep(10)
+    exit()
+else:
+    shrink_stretch_value = shrink_stretch_value_input
+
 
 #-----------------------------------------------Preparing the environment---------------------------------------------
 os.chdir(pathlib.Path(target_file).parent.absolute())
@@ -255,8 +265,8 @@ target_spreadsheet["lat_central_deviation"] = ''
 
 
 for index, row in target_spreadsheet.iterrows():    
-    target_spreadsheet.loc[index, "lon_central_deviation"] = row[longitude_field] - target_spreadsheet_central_lon
-    target_spreadsheet.loc[index, "lat_central_deviation"] = row[latitude_field] - target_spreadsheet_central_lat
+    target_spreadsheet.loc[index, "lon_central_deviation"] = (row[longitude_field] - target_spreadsheet_central_lon) * float(shrink_stretch_value)
+    target_spreadsheet.loc[index, "lat_central_deviation"] = (row[latitude_field] - target_spreadsheet_central_lat) * float(shrink_stretch_value)
 
 
 #--------------------------------------------------STEP 3: Create new coordinates using the central deviation and central coordinates of the new site---------------------------------------------
@@ -272,7 +282,7 @@ elif coordinate_nature == '2':
     target_spreadsheet = target_spreadsheet.drop(columns=["lon_central_deviation", "lat_central_deviation"])
     
 output_csv_file_name = target_file[:-4] + "_shifted.csv"
-target_spreadsheet.to_csv(output_csv_file_name)
+target_spreadsheet.to_csv(output_csv_file_name, index=False)
 
 endTime = currentSecondsTime()
 
