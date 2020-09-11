@@ -1,6 +1,6 @@
 '''-------------------------------------------------------------------------------
 Script Name:      CSV-based Timestamp Updater
-Version:          1.0
+Version:          1.1
 Description:      This tool automates the updating of the timestamp data as a
                     spread from the current date (maintaining the scale of spread)
                     in a CSV file.
@@ -43,6 +43,8 @@ target_file_name = os.path.basename(target_file) # capturing just the name of th
 ## Target field inputs
 for column in target_spreadsheet.columns:
     if re.search('reported_at_\(gmt', column.lower()) or column.lower() == 'date':
+        timestamp_field = column
+    elif column.lower() == 'recorded_at':
         timestamp_field = column
 
 try:
@@ -106,20 +108,34 @@ except NameError:
 
 ###time_notation
 time_char_count = 0
+plus_present = 0
+dot_present = 0
 for char in target_spreadsheet[timestamp_field][0]: 
     if char == ':': 
         time_char_count += 1
+    if char == '+':
+        plus_present = 1
+    if char == '.':
+        dot_present = 1
+
+if plus_present == 1:
+    for index, row in target_spreadsheet.iterrows():
+        target_spreadsheet.loc[index, timestamp_field] = row[timestamp_field].split('+')[0]
+        
+if dot_present == 1:
+    for index, row in target_spreadsheet.iterrows():
+        target_spreadsheet.loc[index, timestamp_field] = row[timestamp_field].split('.')[0]
 
 ### Resultant timestamp notation
 if date_separation == date_separators[0]:
-    if time_char_count == 2:
+    if time_char_count >= 2:
         timestamp_notation = '%m/%d/%y{}%H:%M:%S'.format(datetime_separation)
     elif time_char_count == 1:
         timestamp_notation = '%m/%d/%y{}%H:%M'.format(datetime_separation)
     elif time_char_count == 0:
         timestamp_notation = '%m/%d/%y{}%H'.format(datetime_separation)
 elif date_separation == date_separators[1]:
-    if time_char_count == 2:
+    if time_char_count >= 2:
         timestamp_notation = '%Y-%m-%d{}%H:%M:%S'.format(datetime_separation)
     elif time_char_count == 1:
         timestamp_notation = '%Y-%m-%d{}%H:%M'.format(datetime_separation)

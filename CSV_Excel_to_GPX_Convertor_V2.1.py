@@ -53,7 +53,7 @@ for column in target_spreadsheet.columns:
         longitude_field = column
     if re.search('latitude', column.lower()) or column.lower() == "lat":
         latitude_field = column
-    if re.search('date', column.lower()):
+    if re.search('date gmt +', column.lower()) or column.lower() == "created_at":
         datetime_field = column
     if re.search('elevation', column.lower()) or re.search('altitude', column.lower()):
         elevation_field = column
@@ -240,12 +240,13 @@ for index, row in extracted_csv.iterrows():
         extracted_csv.loc[index, "Datetime"]= date + "T" + time + "Z"
 
 for index, row in extracted_csv.iterrows():
-    if str(extracted_csv["Latitude"][0])[1] == "," or str(extracted_csv["Latitude"][0])[2] == "," or str(extracted_csv["Latitude"][0])[3] == ",":
+    if re.search(',', str(row["Latitude"])):
         extracted_csv.loc[index, "Latitude"] = row["Latitude"].replace(",", ".")
         extracted_csv.loc[index, "Longitude"] = row["Longitude"].replace(",", ".")
-    else:
-        extracted_csv.loc[index, "Latitude"] = str(row["Latitude"])
-        extracted_csv.loc[index, "Longitude"] = str(row["Longitude"])    
+
+for index, row in extracted_csv.iterrows():
+    extracted_csv.loc[index, "Latitude"] = str(row["Latitude"])
+    extracted_csv.loc[index, "Longitude"] = str(row["Longitude"])    
     if elevation_field != "":
         extracted_csv.loc[index, "Elevation"] = float(row["Elevation"])
 
@@ -286,7 +287,7 @@ for record in extracted_csv["Longitude"]:
     element_no += 1
 
 tree = ET.ElementTree(gpx)
-tree.write(gpx_file_name,encoding="UTF-8",xml_declaration='<?xml version="1.0" encoding="UTF-8"?>')
+tree.write(gpx_file_name.replace(' ', '_'),encoding="UTF-8",xml_declaration='<?xml version="1.0" encoding="UTF-8"?>')
 
 endTime = currentSecondsTime()
 

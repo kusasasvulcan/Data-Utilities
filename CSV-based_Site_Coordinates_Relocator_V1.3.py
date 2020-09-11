@@ -1,6 +1,6 @@
 '''-------------------------------------------------------------------------
 Script Name:      CSV-based Site Coordinates Relocator
-Version:          1.2
+Version:          1.3
 Description:      This tool automates the relocation of coordinates in CSV
                     file from one site to another.
 Created By:       Kusasalethu Sithole
@@ -39,7 +39,7 @@ target_file_name = os.path.basename(target_file) # capturing just the name of th
     
 ## Target field inputs
 for column in target_spreadsheet.columns:
-    if re.search('recorded_at', column.lower()):
+    if re.search('9999', column.lower()):
         point_geometry_field = column
     if re.search('longitude', column.lower()) or column.lower() == "lon":
         longitude_field = column
