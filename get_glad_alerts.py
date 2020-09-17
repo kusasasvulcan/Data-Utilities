@@ -27,13 +27,11 @@ if GLAD_GEOSTORE_ID == "" or GLAD_GEOSTORE_ID == " ":
     exit()
 
 ## Start Date
-start_date = input("\nPlease provide a start date for the GLAD Alert period according to format yyyy-mm-dd, i.e. 2020-06-15 (MANDATORY): ")
+start_date = input("\nPlease provide a start date for the GLAD Alert period according to format yyyy-mm-dd, i.e. 2020-06-15 (OPTIONAL). If you are not sure, leave blank: ")
 if start_date == "" or start_date == " ":
-    print("REMINDER: When running this tool, remember to specify the start date according to request above.")
-    time.sleep(15)
-    exit()
+    pass
 elif len(start_date) != 10 or start_date[4] != '-' or start_date[7] != '-':
-    print("REMINDER: When running this tool, remember to specify the start date using the required format according to request above.")
+    print("REMINDER: Since you have chosen to provide the start date, remember to specify the start date using the required format according to request above.")
     time.sleep(15)
     exit()
 
@@ -117,7 +115,10 @@ def fetch_glad_for_geostore(geostore, start_date, end_date, confirmed_only=False
 
 #--------------------------------Getting the GLAD Alert Counts--------------------------------------
 today = date.today()
-start_date = date.fromisoformat(start_date)
+if start_date == "" or start_date == " ":
+    start_date = date.today() - timedelta(weeks=6)
+else:
+    start_date = date.fromisoformat(start_date)
 time_periods = get_time_periods_list(start_date, today)
 step=10
 
