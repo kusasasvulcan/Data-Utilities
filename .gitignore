@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 
-./ERModule.py
+ERModule.py
