@@ -38,25 +38,25 @@ print("""\n\n\n6 Instructions for the FIRST TIME you run this script:
                                                                    
 ## Use the copied cURL contents to update the headers dictionary below                                                                   
 headers = {
-    'authority': 'develop.pamdas.org',
+    'authority': 'sabisands.pamdas.org',
     'cache-control': 'max-age=0',
     'upgrade-insecure-requests': '1',
-    'origin': 'https://develop.pamdas.org',
+    'origin': 'https://sabisands.pamdas.org',
     'content-type': 'application/x-www-form-urlencoded',
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36',
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36',
     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
     'sec-fetch-site': 'same-origin',
     'sec-fetch-mode': 'navigate',
     'sec-fetch-user': '?1',
     'sec-fetch-dest': 'document',
-    'referer': 'https://develop.pamdas.org/admin/choices/choice/add/',
+    'referer': 'https://sabisands.pamdas.org/admin/choices/choice/add/',
     'accept-language': 'en-US,en;q=0.9',
-    'cookie': '_ga=GA1.2.989508353.1607494565; _gid=GA1.2.732368648.1610355741; OptanonAlertBoxClosed=2021-01-11T16:35:42.614Z; OptanonConsent=isIABGlobal=false&datestamp=Mon+Jan+11+2021+18%3A35%3A42+GMT%2B0200+(South+Africa+Standard+Time)&version=6.10.0&hosts=&consentId=c7b3223c-3aad-4322-8ce0-a5adfa1a21a7&interactionCount=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A1; csrftoken=ddw9ZSQewPIqdIUUwWchlc8BappRIQbFxshUX3wBNSTATHtE7NHhsflQ52co08PS; sessionid=lbgtwyi5tfzl50cn4u5lnp49wycny01a',
+    'cookie': '_ga=GA1.2.989508353.1607494565; OptanonAlertBoxClosed=2021-01-29T13:40:46.598Z; csrftoken=3SojWmdzIEKoNbL8XIZ09gtdpvL8dqkIASu2isWjLCMcmFwmu9wkFhWtX0iyBeh4; sessionid=89etb37ust7gp6il9knbs819os16qetp; _gid=GA1.2.1155336314.1613113021; token=3CoI4Tlfb9cKnrc8nYujUjTVdkJHrU; OptanonConsent=isIABGlobal=false&datestamp=Fri+Feb+12+2021+12%3A56%3A05+GMT%2B0200+(South+Africa+Standard+Time)&version=6.12.0&hosts=&consentId=c7b3223c-3aad-4322-8ce0-a5adfa1a21a7&interactionCount=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A1&geolocation=ZA%3BGP&AwaitingReconsent=false',
 }
 
 ## Use the previously copied cURL contents to update the csrfmiddlewaretoken and site address values below (you will find this information in the --data-raw element in the cURL contents)
-csrfmiddlewaretoken = 'gmDHM1u5woSZjgluWXANtW3sWWtF8HNPABosKcasNr39ZfUexO5NAZgHRzgcqZr2'
-site_address = 'https://develop.pamdas.org'
+csrfmiddlewaretoken = 'YJc45qQNcSTLNzjwKsB8ipnWTemLia4IvJiNrwzxfQVzm34KhT8sOqQcrJTbGY14'
+site_address = 'https://sabisands.pamdas.org'
 
 
 ## Choice.csv input
@@ -108,7 +108,7 @@ print("\n STEP: Uploading choices into your chosen ER Site.")
 
 for choice_Index, choice_Row in csv_df[1:].iterrows():
     # generating UUID for choice id
-    choice_id = str(uuid.uuid1())
+    choice_id = str(uuid.uuid4())
     # compiling the data
     data = {
       'csrfmiddlewaretoken': csrfmiddlewaretoken,

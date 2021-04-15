@@ -70,7 +70,7 @@ def submitRows(row):
     additionalData.pop('deviceId')
 
     ERModule.recordObservation(SERVER, TOKEN, recordedAt, sourceID,
-        row['Name'], 'wildlife', 'elephant', 'Tracker', 'tracking_device', lat,
+        row['Name'], 'person', 'ranger', 'GPS-Iridium Ele collar', 'tracking_device', lat,
         lon, additionalData)
         
 
